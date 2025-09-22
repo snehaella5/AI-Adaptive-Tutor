@@ -24,22 +24,45 @@ Respond strictly in JSON format like:
 `
 
   try {
-    const res = await fetch('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'llama3', prompt, stream: false }),
-    })
-    if (!res.ok) throw new Error('Ollama server error')
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+        }),
+      }
+    )
+
+    if (!res.ok) throw new Error(`Gemini API error: ${res.statusText}`)
     const data = await res.json()
-    try { return JSON.parse(data.response) } catch { return { explanation: data.response, quiz: [] } }
+
+    // Gemini returns text inside candidates
+    const rawText =
+      data.candidates?.[0]?.content?.parts?.[0]?.text || ""
+
+    try {
+      return JSON.parse(rawText)
+    } catch {
+      // If model doesn’t return strict JSON
+      return { explanation: rawText, quiz: [] }
+    }
   } catch (err) {
-    console.error('Ollama fallback:', err)
+    console.error("Gemini fallback:", err)
     return {
       explanation: `⚠️ Example explanation for "${topic}"`,
       quiz: [
-        { question: `Example question for "${topic}"?`, options: ['A','B','C','D'], answer: 'A' }
-      ]
+        {
+          question: `Example question for "${topic}"?`,
+          options: ["A", "B", "C", "D"],
+          answer: "A",
+        },
+      ],
     }
   }
 }
-
