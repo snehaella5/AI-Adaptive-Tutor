@@ -1,83 +1,197 @@
 ## Study Buddy AI – Adaptive Tutor Agent
 
-Repository: AI-Adaptive-Tutor
+📚 Prism — Adaptive Study Buddy (AI)
 
-Folder Name: ai-adaptive-tutor
+Prism is an AI-powered adaptive tutor built with Next.js + Prisma and designed to run with either Google Gemini API (cloud) or Ollama (LLaMA) locally.
+It answers questions, generates short practice quizzes, tracks progress, and gives personalized next-step recommendations.
 
-## Overview
+Tagline: Prism — your AI-powered study companion that explains, quizzes, and adapts.
 
-Study Buddy AI is an adaptive tutoring agent designed to personalize the learning experience. It integrates an AI-powered chat system with progress tracking to deliver tailored explanations, practice exercises, and improvement recommendations.
+✨ What Prism does (quick, human-friendly summary)
 
-The agent uses Gemini API (with optional support for Ollama for running local LLMs) to provide structured, interactive tutoring. Learners can ask questions, receive detailed answers, test themselves with quizzes, and track progress over time.
+When you ask the Study Buddy a question (Chat Mode), Prism responds with a helpful learning package — not just one-line answers:
 
-## Features
+Clear definition of the topic / concept. 📘
 
-### AI Chat Agent
-Ask questions and receive structured answers with definitions, examples, quizzes, and recommendations.
+Concrete examples so the concept clicks. 🌍
 
-### Progress Tracking
-Monitors accuracy, provides feedback, and suggests next steps for improvement.
+A small practice quiz question to test understanding. 📝
 
-### Adaptive Learning
-Generates dynamic next steps based on student responses and performance.
+Next-step personalized recommendation (e.g., study notes, videos, practice sets). 🚀
 
-### Multi-Model Support
-Works with cloud models (Gemini API) or local models (Ollama) for flexibility.
+The Progress Tracker records quiz results, computes accuracy, provides feedback (e.g., Needs improvement / Excellent), and suggests next steps. Data is persisted with SQLite + Prisma.
 
-### Full-Stack Architecture
-Built with Next.js, Prisma ORM, and TypeScript, combining responsive frontend and scalable backend.
+📁 Repo structure (your repo)
+app/
+ ├─ api/
+ │   ├─ chat/
+ │   │  ├─ route.ts            # AI chat endpoint
+ │   │  └─ studyBuddyService.ts# core AI logic (called by route)
+ │   └─ progress/
+ │      └─ route.ts            # Progress tracking endpoint (POST/GET)
+ ├─ page.tsx                   # Main UI (Chat + Progress tabs)
+ ├─ globals.css
+ └─ layout.tsx
 
-## System Architecture
+generated/prisma/              # Prisma client output
+prisma/
+ ├─ schema.prisma
+ ├─ migrations/
+ └─ dev.db                     # local SQLite DB
 
-### Frontend (Next.js + Tailwind CSS)
+.env.local                     # environment variables (API keys, DB)
+package.json
+README.md
 
-Provides a clean interface with two main tabs:
+🛠️ Tech stack
 
-Chat: Interactive AI agent for learning.
+Frontend & backend: Next.js (App Router) + React + Tailwind CSS
 
-Progress: Dashboard showing accuracy and feedback.
+DB: SQLite (local) + Prisma ORM
 
-### Backend (API Routes)
+AI engines: Google Gemini API (default in your repo) — or a local Ollama (LLaMA) model
 
-/api/chat: Connects with Gemini or Ollama to generate AI responses.
+Language: TypeScript
 
-/api/progress: Stores and fetches student performance metrics.
+🚀 Quick start (local)
 
-### Service Layer
+1. Clone repo
 
-studyBuddyService.ts contains the logic for tutoring interactions, including formatting explanations, quiz generation, and recommendations.
+git clone https://github.com/snehaella5/AI-Adaptive-Tutor.git
+cd ai-adaptive-tutor
 
-### Database (Prisma + SQLite)
 
-Tracks user performance data.
 
-Can be extended to use other databases by updating DATABASE_URL.
+2. Install dependencies
 
-## Repository Structure
+npm install
 
-app/ – Next.js App Router code (frontend + API routes).
+3. Environment Variables
+Create .env.local in project root and add:
 
-api/chat/route.ts – AI chat endpoint.
+DATABASE_URL="file:./prisma/dev.db"
+# If using Gemini:
+GEMINI_API_KEY="your_gemini_key_here"
+# Choose provider: "gemini" or "ollama"
+AI_PROVIDER="gemini"
 
-api/progress/route.ts – Progress tracking endpoint.
 
-page.tsx – Main application UI.
+Pull & run Ollama only if you want to use local LLaMA:
 
-prisma/ – Prisma ORM configuration.
+# pull model (one-time)
+ollama pull llama3
 
-schema.prisma – Database schema.
+# run the server (keep this terminal open)
+ollama serve
 
-migrations/ – Migration history.
+4.Database Setup
+Run Prisma migrations (creates dev.db and Prisma client)
 
-dev.db – Local development database.
+npx prisma migrate dev --name init
 
-TS/ – TypeScript services.
 
-studyBuddyService.ts – Core AI agent logic.
+Start the Next dev server
 
-.env.local – Environment configuration (API keys, database URL).
+5. Run the Development Server
+npm run dev
 
-package.json – Dependencies and scripts.
+
+6. Open the app:
+
+http://localhost:3000
+
+🔬 Test the API endpoints (manual)
+Chat (Chat Mode)
+
+7. Send a prompt to the chat endpoint:
+
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Explain Newton\'s Laws of Motion"}'
+
+
+Expected response shape (example):
+
+{
+  "response": "Newton's laws... (definition + example + a quiz + next steps)"
+}
+
+Progress (save a run)
+curl -X POST http://localhost:3000/api/progress \
+  -H "Content-Type: application/json" \
+  -d '{"studentId":"student-1","answers":[{"questionId":1,"isCorrect":true},{"questionId":2,"isCorrect":false}]}'
+
+
+Expected JSON:
+
+{
+  "accuracy": 50,
+  "feedback": "Needs improvement",
+  "recommendation": "Revise current topic",
+  "nextSteps": ["Practice more example questions","Review mistakes carefully"]
+}
+
+
+Fetch recent progress (GET):
+
+curl http://localhost:3000/api/progress
+
+🔁 Switch between Gemini and Ollama
+
+Your repo is built to support both. it’s controlled by AI_PROVIDER in .env.local.
+
+In app/api/chat/route.ts or studyBuddyService.ts implement a small switch:
+
+const provider = process.env.AI_PROVIDER || "gemini";
+
+if (provider === "ollama") {
+  // call local Ollama server
+  const res = await fetch("http://localhost:11434/api/generate", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ model: "llama3:latest", prompt }),
+  });
+  const json = await res.json();
+  return json.response;
+} else {
+  // call Gemini (cloud): use your GEMINI_API_KEY
+  // (your code may use the specific Gemini client / HTTP call you already have)
+  const reply = await callGemini(prompt); // placeholder for your Gemini call
+  return reply;
+}
+
+
+Keep your API key secure and do not commit .env.local.
+
+✅ Good practices & debugging
+
+If Chat returns undefined:
+
+Confirm AI_PROVIDER and .env.local keys are set.
+
+If using Ollama: ensure ollama serve (or ollama run llama3) is running and curl http://localhost:11434/api/tags returns your model.
+
+Check terminal logs for your Next server — console.log the raw data you get from the model API to see the shape.
+
+To inspect DB data:
+
+npx prisma studio
+
+# opens a web UI to inspect tables (Progress)
+
+🧭 UX: what the Chat returns (the learning package)
+
+When you type a topic, Prism will typically return:
+
+Definition — concise and clear (what it is).
+
+Example(s) — easy-to-relate examples.
+
+Mini quiz — one practice question (MCQ or short question) to check understanding.
+
+Next-step recommendation — short list of how to progress (videos, practice, summary).
+
+This is what makes Prism an adaptive study buddy — it explains, checks, and recommends next steps.
 
 ### Screenshots
 Home Interface
@@ -115,9 +229,6 @@ This diagram explains:
 - **Chat Flow**: User asks → API forwards → Model (Gemini/Ollama) → AI response → Service formats → Frontend shows structured content.  
 - **Progress Flow**: User tracks → API call → Prisma/SQLite stores results → Recommendations → Displayed back in UI.  
 
----
-
-Do you want me to **insert this directly into the final README draft** (so you just copy-paste one file), or give it separately so you can add it under the "System Architecture" section?
 
 
 Installation
@@ -193,3 +304,12 @@ Open a Pull Request.
 License
 
 This project is licensed under the MIT License.
+
+## Documentation  
+
+- [Introduction](./docs/introduction.md)  
+- [System Architecture](./docs/architecture.md)  
+- [Setup Guide](./docs/setup.md)  
+- [Usage Guide](./docs/usage.md)  
+- [API Reference](./docs/api.md)  
+- [Future Work](./docs/future-work.md)  
